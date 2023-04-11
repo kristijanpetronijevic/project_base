@@ -197,6 +197,7 @@ int main() {
 
     // render loop
     // -----------
+    programState->camera.Position = glm::vec3(0.0f);
     while (!glfwWindowShouldClose(window)) {
         // per-frame time logic
         // --------------------
@@ -235,24 +236,35 @@ int main() {
 
         // render the loaded model
         glm::mat4 model = glm::mat4(1.0f);
+        model = glm::scale(model, glm::vec3(0.02f, 0.02f, 0.02f));
 
-            model = glm::scale(model, glm::vec3(0.02f, 0.02f, 0.02f));
        // model = glm::translate(model, glm::vec3(0.0f, -0.3f, 0.0f));
         //model = glm::scale(model, glm::vec3(programState->backpackScale));    // it's a bit too big for our scene, so scale it down
-      model = glm::rotate(model,currentFrame, glm::vec3(-1222.0f, -100.9f, 50.0f));
+    //  model = glm::rotate(model,currentFrame, glm::vec3(-1222.0f, -100.9f, 50.0f));
+
         model = glm::translate(model,
                                programState->backpackPosition); // translate it down so it's at the center of the scene
        ourShader.setMat4("model", model);
 
         ourModel.Draw(ourShader);
 
+//        for(int i =0; i < 10;i++) {
+//            model = glm::rotate(model, currentFrame, glm::vec3(-1222.0f, -100.9f, 50.0f));
+//            ourShader.setMat4("model", model);
+//            ourModel.Draw(ourShader);
+//        }
+
+
         glm::mat4 modelPsa = glm::mat4(1.0f);
+//        modelPsa = glm::translate(modelPsa,
+//                                  programState->backpackPosition);
         modelPsa = glm::scale(modelPsa, glm::vec3(0.1f, 0.1f, 0.1f));
         modelPsa = glm::rotate(modelPsa,-1.6f, glm::vec3(1.0f, 0.0f, 0.0f));
         modelPsa = glm::translate(modelPsa, glm::vec3(0.0f, -0.6f, 0.0f));
         ourShader.setMat4("model", modelPsa);
 
         ourModel1.Draw(ourShader);
+
         if (programState->ImGuiEnabled)
             DrawImGui(programState);
 
