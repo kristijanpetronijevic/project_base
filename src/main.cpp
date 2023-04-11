@@ -180,6 +180,11 @@ int main() {
    // Model ourModel1("resources/objects/house/HouseSuburban.obj");
     ourModel1.SetShaderTextureNamePrefix("material.");
 
+    Model ourModel2("resources/objects/moon/moon.obj");
+    ourModel2.SetShaderTextureNamePrefix("material.");
+
+
+
     PointLight& pointLight = programState->pointLight;
     pointLight.position = glm::vec3(4.0f, 4.0, 0.0);
     pointLight.ambient = glm::vec3(0.8f, 0.8f, 0.8f);
@@ -254,6 +259,7 @@ int main() {
 // MODEL PSA ISPOD
         glm::mat4 modelPsa = glm::mat4(1.0f);
 //        modelPsa = glm::translate(modelPsa,
+//                                  programState->backpackPosition);//        modelPsa = glm::translate(modelPsa,
 //                                  programState->backpackPosition);
         modelPsa = glm::translate(modelPsa, glm::vec3(22.0f, -8.0f, -33.0f));
         modelPsa = glm::rotate(modelPsa,-1.6f, glm::vec3(1.0f, 0.0f, 0.0f));
@@ -265,6 +271,22 @@ int main() {
         ourShader.setMat4("model", modelPsa);
 
         ourModel1.Draw(ourShader);
+// Model sneska ispod
+        glm::mat4 modelMeseca = glm::mat4(1.0f);
+        modelMeseca = glm::translate(modelMeseca ,glm::vec3(-2.0f, 7.0f, -25.0f));
+
+        modelMeseca = glm::translate(modelMeseca ,programState->backpackPosition);
+        modelMeseca= glm::scale(modelMeseca , glm::vec3(programState->backpackScale, programState->backpackScale, programState->backpackScale));
+        ourShader.setMat4("model", modelMeseca);
+
+        ourModel2.Draw(ourShader);
+
+
+
+
+
+
+
 
         if (programState->ImGuiEnabled)
             DrawImGui(programState);
