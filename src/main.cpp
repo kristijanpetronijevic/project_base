@@ -55,7 +55,7 @@ struct ProgramState {
     glm::vec3 clearColor = glm::vec3(0);
     bool ImGuiEnabled = false;
     Camera camera;
-    bool CameraMouseMovementUpdateEnabled = true;
+    bool CameraMouseMovementUpdateEnabled = false;
     glm::vec3 backpackPosition = glm::vec3(0.0f);
     float backpackScale = 1.0f;
     PointLight pointLight;
@@ -78,7 +78,10 @@ void ProgramState::SaveToFile(std::string filename) {
         << camera.Position.z << '\n'
         << camera.Front.x << '\n'
         << camera.Front.y << '\n'
-        << camera.Front.z << '\n';
+        << camera.Front.z << '\n'
+        << backpackPosition.x <<'\n'
+        << backpackPosition.y <<'\n'
+        << backpackPosition.z <<'\n';
 }
 
 void ProgramState::LoadFromFile(std::string filename) {
@@ -93,7 +96,10 @@ void ProgramState::LoadFromFile(std::string filename) {
            >> camera.Position.z
            >> camera.Front.x
            >> camera.Front.y
-           >> camera.Front.z;
+           >> camera.Front.z
+           >> backpackPosition.x
+           >> backpackPosition.y
+           >> backpackPosition.z ;
     }
 }
 
@@ -165,12 +171,18 @@ int main() {
 
     // load models
     // -----------
-    Model ourModel("resources/objects/backpack/backpack.obj");
+    //Model ourModel("resources/objects/backpack/backpack.obj");
+   // ourModel.SetShaderTextureNamePrefix("material.");
+
+    Model ourModel("resources/objects/floating_island_exp4/6.obj");
     ourModel.SetShaderTextureNamePrefix("material.");
+
+    Model ourModel1("resources/objects/Models_G0404A105/13458_Bullmastiff_v1_L3.obj");
+    ourModel1.SetShaderTextureNamePrefix("material.");
 
     PointLight& pointLight = programState->pointLight;
     pointLight.position = glm::vec3(4.0f, 4.0, 0.0);
-    pointLight.ambient = glm::vec3(0.1, 0.1, 0.1);
+    pointLight.ambient = glm::vec3(0.8f, 0.8f, 0.8f);
     pointLight.diffuse = glm::vec3(0.6, 0.6, 0.6);
     pointLight.specular = glm::vec3(1.0, 1.0, 1.0);
 
@@ -223,12 +235,24 @@ int main() {
 
         // render the loaded model
         glm::mat4 model = glm::mat4(1.0f);
+
+            model = glm::scale(model, glm::vec3(0.02f, 0.02f, 0.02f));
+       // model = glm::translate(model, glm::vec3(0.0f, -0.3f, 0.0f));
+        //model = glm::scale(model, glm::vec3(programState->backpackScale));    // it's a bit too big for our scene, so scale it down
+      model = glm::rotate(model,currentFrame, glm::vec3(-1222.0f, -100.9f, 50.0f));
         model = glm::translate(model,
                                programState->backpackPosition); // translate it down so it's at the center of the scene
-        model = glm::scale(model, glm::vec3(programState->backpackScale));    // it's a bit too big for our scene, so scale it down
-        ourShader.setMat4("model", model);
+       ourShader.setMat4("model", model);
+
         ourModel.Draw(ourShader);
 
+        glm::mat4 modelPsa = glm::mat4(1.0f);
+        modelPsa = glm::scale(modelPsa, glm::vec3(0.1f, 0.1f, 0.1f));
+        modelPsa = glm::rotate(modelPsa,-1.6f, glm::vec3(1.0f, 0.0f, 0.0f));
+        modelPsa = glm::translate(modelPsa, glm::vec3(0.0f, -0.6f, 0.0f));
+        ourShader.setMat4("model", modelPsa);
+
+        ourModel1.Draw(ourShader);
         if (programState->ImGuiEnabled)
             DrawImGui(programState);
 
@@ -240,7 +264,7 @@ int main() {
         glfwPollEvents();
     }
 
-    programState->SaveToFile("resources/program_state.txt");
+    //programState->SaveToFile("resources/program_state.txt");
     delete programState;
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
