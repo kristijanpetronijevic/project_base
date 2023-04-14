@@ -24,8 +24,11 @@ void scroll_callback(GLFWwindow *window, double xoffset, double yoffset);
 
 void processInput(GLFWwindow *window);
 
+
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods);
 unsigned int loadCubemap(vector<std::string> faces);
+unsigned int loadTexture(char const * path);
+
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
@@ -104,7 +107,7 @@ void ProgramState::LoadFromFile(std::string filename) {
 }
 
 ProgramState *programState;
-
+int f2 = false;
 void DrawImGui(ProgramState *programState);
 
 int main() {
@@ -142,6 +145,39 @@ int main() {
         return -1;
     }
 
+
+    float transparentVertices[] = {
+            // positions         // texture Coords (swapped y coordinates because texture is flipped upside down)
+            0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
+            0.0f, -0.5f,  0.0f,  0.0f,  1.0f,
+            1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
+
+            0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
+            1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
+            1.0f,  0.5f,  0.0f,  1.0f,  0.0f
+    };
+    vector<glm::vec3> vegetation
+            {
+                    glm::vec3(-1.5f, 0.0f, -0.48f),
+                    glm::vec3( 1.5f, 0.0f, 0.51f),
+                    glm::vec3( 0.0f, 0.0f, 0.7f),
+                    glm::vec3(-0.3f, 0.0f, -2.3f),
+                    glm::vec3 (0.5f, 0.0f, -0.6f)
+            };
+    unsigned int transparentVAO, transparentVBO;
+    glGenVertexArrays(1, &transparentVAO);
+    glGenBuffers(1, &transparentVBO);
+    glBindVertexArray(transparentVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, transparentVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(transparentVertices), transparentVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glBindVertexArray(0);
+
+
+
     // tell stb_image.h to flip loaded texture's on the y-axis (before loading model).
     stbi_set_flip_vertically_on_load(true);
 
@@ -157,7 +193,6 @@ int main() {
     (void) io;
 
 
-
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330 core");
 
@@ -169,10 +204,9 @@ int main() {
     // -------------------------
     Shader ourShader("resources/shaders/2.model_lighting.vs", "resources/shaders/2.model_lighting.fs");
     Shader skyboxShader("resources/shaders/6.1.skybox.vs", "resources/shaders/6.1.skybox.fs");
+    Shader shader("resources/shaders/3.1.blending.vs", "resources/shaders/3.1.blending.fs");
     // load models
     // -----------
-    //Model ourModel("resources/objects/backpack/backpack.obj");
-   // ourModel.SetShaderTextureNamePrefix("material.");
 
     Model ourModel("resources/objects/floating_island_exp4/7.obj");
     ourModel.SetShaderTextureNamePrefix("material.");
@@ -182,8 +216,6 @@ int main() {
 
     Model ourModel2("resources/objects/moon/moon.obj");
     ourModel2.SetShaderTextureNamePrefix("material.");
-
-
 
     PointLight& pointLight = programState->pointLight;
     pointLight.position = glm::vec3(4.0f, 4.0, 0.0);
@@ -258,24 +290,14 @@ int main() {
                     FileSystem::getPath("resources/textures/skybox/Daylight Box_Top.bmp"),
                     FileSystem::getPath("resources/textures/skybox/Daylight Box_Front.bmp"),
                     FileSystem::getPath("resources/textures/skybox/Daylight Box_Back.bmp")
-
-//                    FileSystem::getPath("resources/textures/skybox/miramar_rt.tga"),
-//                    FileSystem::getPath("resources/textures/skybox/miramar_lf.tga"),
-//                    FileSystem::getPath("resources/textures/skybox/miramar_dn.tga"),
-//                    FileSystem::getPath("resources/textures/skybox/miramar_up.tga"),
-//                    FileSystem::getPath("resources/textures/skybox/miramar_ft.tga"),
-//                    FileSystem::getPath("resources/textures/skybox/miramar_bk.tga")
-
-
-
             };
     unsigned int cubemapTexture = loadCubemap(faces);
     skyboxShader.use();
     skyboxShader.setInt("skybox", 0);
-    //r l b t f b
-    //l r d
-    // draw in wireframe
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    unsigned int transparentTexture = loadTexture(FileSystem::getPath("resources/textures/cloud.png").c_str());
+    shader.use();
+    shader.setInt("texture1", 0);
 
     // render loop
     // -----------
@@ -296,6 +318,10 @@ int main() {
         // ------
         glClearColor(programState->clearColor.r, programState->clearColor.g, programState->clearColor.b, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        //FACE CULLING
+        glEnable(GL_CULL_FACE);
+        if(!f2)
+            glCullFace(GL_BACK);
 
         // don't forget to enable shader before setting uniforms
         ourShader.use();
@@ -321,55 +347,58 @@ int main() {
         ourShader.setMat4("view", view);
 
         // render the loaded model
+
+// Model ostrva
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(-30.0f,135.0f,-82.0f));
         model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-
-       // model = glm::translate(model, glm::vec3(0.0f, -0.3f, 0.0f));
-        //model = glm::scale(model, glm::vec3(programState->backpackScale));    // it's a bit too big for our scene, so scale it down
-    //  model = glm::rotate(model,currentFrame, glm::vec3(-1222.0f, -100.9f, 50.0f));
-
-//        model = glm::translate(model,
-//                               programState->backpackPosition); // translate it down so it's at the center of the scene
-
-       ourShader.setMat4("model", model);
-       ourModel.Draw(ourShader);
-        // GOTOVO OSTRVO
+        ourShader.setMat4("model", model);
+        ourModel.Draw(ourShader);
 
 
-// MODEL PSA ISPOD
+
+// Model psa
         glm::mat4 modelPsa = glm::mat4(1.0f);
-//        modelPsa = glm::translate(modelPsa,
-//                                  programState->backpackPosition);//        modelPsa = glm::translate(modelPsa,
-//                                  programState->backpackPosition);
-        modelPsa = glm::translate(modelPsa, glm::vec3(22.0f, -8.0f, -44.0f));
+        modelPsa = glm::translate(modelPsa, glm::vec3(22.0f, -8.6f, -44.0f));
         modelPsa = glm::rotate(modelPsa,-1.6f, glm::vec3(1.0f, 0.0f, 0.0f));
-      //  modelPsa = glm::scale(modelPsa, glm::vec3(programState->backpackScale, programState->backpackScale, programState->backpackScale));
         modelPsa = glm::scale(modelPsa, glm::vec3(0.15f, 0.15f, 0.15f));
-
-
-
         ourShader.setMat4("model", modelPsa);
-
         ourModel1.Draw(ourShader);
-// Model sneska ispod
+
+
+
+
+// Model meseca
         glm::mat4 modelMeseca = glm::mat4(1.0f);
         modelMeseca = glm::translate(modelMeseca ,glm::vec3(10.0f, 10.0f, -46.0f));
         modelMeseca = glm::rotate(modelMeseca,currentFrame, glm::vec3(0.0f, 1.0f, 0.0f));
         modelMeseca = glm::translate(modelMeseca ,glm::vec3(0.0f, 0.0f, -15.0f));
-        modelMeseca = glm::translate(modelMeseca ,programState->backpackPosition);
         modelMeseca= glm::scale(modelMeseca , glm::vec3(programState->backpackScale, programState->backpackScale, programState->backpackScale));
         ourShader.setMat4("model", modelMeseca);
-
         ourModel2.Draw(ourShader);
 
+        //blending
 
+        glm::mat4 model1 = glm::mat4(1.0f);
+        // vegetation
+        glBindVertexArray(transparentVAO);
+        glBindTexture(GL_TEXTURE_2D, transparentTexture);
 
+        shader.use();
+        shader.setMat4("view", view);
+        shader.setMat4("projection", projection);
+        int z = 1;
+        for (unsigned int i = 0; i < vegetation.size(); i++)
+        {
 
-
-
-
-
+            model1 = glm::mat4(1.0f);
+            model1 = glm::translate(model1, vegetation[i]);
+            model1 = glm::translate(model1, glm::vec3(-20.0f+20*i,20.0f*(z%2),-80.0f));
+            z++; z*=-1;
+            model1 = glm::scale(model1, glm::vec3(20.0f,20.0f,20.0f));
+            shader.setMat4("model", model1);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+        }
 
 
         // draw skybox as last
@@ -420,6 +449,14 @@ void processInput(GLFWwindow *window) {
         programState->camera.ProcessKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         programState->camera.ProcessKeyboard(RIGHT, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_F2) == GLFW_PRESS) {
+       f2 = true;
+        glCullFace(GL_FRONT);
+    }
+    if (glfwGetKey(window, GLFW_KEY_F2) == GLFW_RELEASE) {
+        f2 = false;
+        glCullFace(GL_FRONT);
+    }
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -527,6 +564,42 @@ unsigned int loadCubemap(vector<std::string> faces)
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    return textureID;
+}
+unsigned int loadTexture(char const * path)
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+
+    int width, height, nrComponents;
+    unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
+    if (data)
+    {
+        GLenum format;
+        if (nrComponents == 1)
+            format = GL_RED;
+        else if (nrComponents == 3)
+            format = GL_RGB;
+        else if (nrComponents == 4)
+            format = GL_RGBA;
+
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT); // for this tutorial: use GL_CLAMP_TO_EDGE to prevent semi-transparent borders. Due to interpolation it takes texels from next repeat
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        stbi_image_free(data);
+    }
+    else
+    {
+        std::cout << "Texture failed to load at path: " << path << std::endl;
+        stbi_image_free(data);
+    }
 
     return textureID;
 }
