@@ -211,7 +211,6 @@ int main() {
     Model ourModel("resources/objects/floating_island_exp4/7.obj");
     ourModel.SetShaderTextureNamePrefix("material.");
     Model ourModel1("resources/objects/Models_G0404A105/13458_Bullmastiff_v1_L3.obj");
-   // Model ourModel1("resources/objects/house/HouseSuburban.obj");
     ourModel1.SetShaderTextureNamePrefix("material.");
 
     Model ourModel2("resources/objects/moon/moon.obj");
