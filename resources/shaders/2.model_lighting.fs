@@ -118,12 +118,8 @@ void main()
 {
     vec3 normal = normalize(Normal);
     vec3 viewDir = normalize(viewPosition - FragPos);
-   // vec3 result = CalcDirLight(dirLight, normal, viewDir) + CalcSpotLight(spotLight, normal, FragPos, viewDir);
-   vec3 result;
-   if (bloom)
-           result = CalcSpotLight(spotLight, Normal, FragPos, viewDir) + CalcPointLight(pointLight, normal, FragPos, viewDir);
-       else
-           result = 0.2*CalcSpotLight(spotLight, Normal, FragPos, viewDir) + CalcDirLight(dirLight, normal, viewDir);
+    vec3 result = CalcDirLight(dirLight, normal, viewDir) + CalcSpotLight(spotLight, normal, FragPos, viewDir);
+ 
 
        float brightness = dot(result, vec3(0.2126, 0.7152, 0.0722));
            if(brightness > 1.0)
