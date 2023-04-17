@@ -114,7 +114,7 @@ void DrawImGui(ProgramState *programState);
 unsigned int quadVAO = 0;
 unsigned int quadVBO;
 float exposure = 0.75f;
-bool bloom = false;
+bool bloom = true;
 
 
 int main() {
